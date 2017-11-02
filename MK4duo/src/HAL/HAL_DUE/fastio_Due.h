@@ -91,14 +91,30 @@ static constexpr Fastio_Param Fastio[111] = {
   // D80 to D89
   { PIOB, 12 }, { PIOA,  8 }, { PIOA, 11 }, { PIOA, 13 }, { PIOD,  4 }, { PIOB, 11 }, { PIOB, 21 }, { PIOA, 29 }, { PIOB, 15 }, { PIOB, 14 },
 
-  // D90 to D99
-  { PIOA,  1 }, { PIOB, 15 }, { PIOA,  5 }, { PIOB, 12 }, { PIOB, 22 }, { PIOB, 23 }, { PIOB, 24 }, { PIOC, 20 }, { PIOC, 27 }, { PIOC, 10 },
-
-  // D100 to D109
-  { PIOC, 11 }, { PIOB, 0 }, { PIOB, 1 }, { PIOB, 2 }, { PIOB, 3 }, { PIOB, 4 }, { PIOB, 5 }, { PIOB, 6 }, { PIOB, 7 }, { PIOB, 8 },
+  // D90 to D91
+  { PIOA,  1 }, { PIOB, 15 },
   
-  // D110
-  { PIOB, 11 }
+  #if ENABLED(ARDUINO_SAM_ARCHIM)
+
+    // D92 to D99
+    { PIOC,  11 }, { PIOB, 2 }, { PIOB, 1 }, { PIOB, 0 }, { PIOC, 10 }, { PIOB, 24 }, { PIOB, 7 }, { PIOB, 6 },
+
+    // D100 to D107
+    { PIOB, 8 }, { PIOB, 5 }, { PIOB, 4 }, { PIOB, 3 }, { PIOC, 20 }, { PIOB, 22 }, { PIOC, 27 }, { PIOB, 10 },
+
+  #else
+
+    // D92 to D99
+    { PIOA,  5 }, { PIOB, 12 }, { PIOB, 22 }, { PIOB, 23 }, { PIOB, 24 }, { PIOC, 20 }, { PIOC, 27 }, { PIOC, 10 },
+
+    // D100 to D107
+    { PIOC, 11 }, { PIOB, 0 }, { PIOB, 1 }, { PIOB, 2 }, { PIOB, 3 }, { PIOB, 4 }, { PIOB, 5 }, { PIOB, 6 },
+
+  #endif
+
+    // D108 to D110
+    { PIOB, 7 }, { PIOB, 8 }, { PIOB, 11 }
+
 };
 
 /**
@@ -108,6 +124,9 @@ static constexpr Fastio_Param Fastio[111] = {
 #ifndef MASK
   #define MASK(PIN) (1 << PIN)
 #endif
+
+#define OUTPUT_LOW  0x3
+#define OUTPUT_HIGH 0x4
 
 /**
  * magic I/O routines
@@ -159,6 +178,11 @@ static FORCE_INLINE void SET_OUTPUT(const Pin pin) {
   if (pinDesc.ulPinType == PIO_NOT_A_PIN) return;
   PIO_Configure(pinDesc.pPort, PIO_OUTPUT_0, pinDesc.ulPin, pinDesc.ulPinConfiguration);
 }
+static FORCE_INLINE void SET_OUTPUT_HIGH(const Pin pin) {
+  const PinDescription& pinDesc = g_APinDescription[pin];
+  if (pinDesc.ulPinType == PIO_NOT_A_PIN) return;
+  PIO_Configure(pinDesc.pPort, PIO_OUTPUT_1, pinDesc.ulPin, pinDesc.ulPinConfiguration);
+}
 
 // set pin as input with pullup
 static FORCE_INLINE void SET_INPUT_PULLUP(const Pin pin) {
@@ -172,6 +196,14 @@ static FORCE_INLINE void SET_INPUT_PULLUP(const Pin pin) {
 static FORCE_INLINE void OUT_WRITE(const Pin pin, const uint8_t flag) {
   SET_OUTPUT(pin);
   WRITE(pin, flag);
+}
+
+static FORCE_INLINE bool USEABLE_HARDWARE_PWM(const Pin pin) {
+  const uint32_t attr = g_APinDescription[pin].ulPinAttribute;
+  if ((attr & PIN_ATTR_PWM) != 0 || (attr & PIN_ATTR_TIMER) != 0)
+    return true;
+  else
+    return false;
 }
 
 #endif  // _HAL_FASTIO_DUE_H
